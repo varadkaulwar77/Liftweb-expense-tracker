@@ -13,6 +13,7 @@ import {
 import {
   IndianRupee,
   TrendingUp,
+  TrendingDown,
   Clock,
   ShoppingCart,
   Users,
@@ -70,6 +71,7 @@ export default function Dashboard() {
     let todayCost = 0
     let pendingPayments = 0
     let ordersThisMonth = 0
+    let deliveredRevenue = 0
 
     for (const order of orders) {
       const orderItems = itemsByOrder[order.id] || []
@@ -86,9 +88,13 @@ export default function Dashboard() {
       if (order.payment_status !== 'Paid' && order.status !== 'Cancelled') {
         pendingPayments += Math.max(subtotal - Number(order.advance_paid || 0) - Number(order.balance_paid || 0), 0)
       }
+      if (order.status === 'Delivered') {
+        deliveredRevenue += subtotal
+      }
     }
 
     const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0)
+    const totalProfitLoss = deliveredRevenue - totalExpenses
 
     return {
       todayRevenue,
@@ -97,6 +103,7 @@ export default function Dashboard() {
       ordersThisMonth,
       totalClients: clients.length,
       totalExpenses,
+      totalProfitLoss,
     }
   }, [orders, itemsByOrder, clients, expenses, today, thisMonth])
 
@@ -143,8 +150,8 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 7 }).map((_, i) => (
             <SkeletonCard key={i} />
           ))}
         </div>
@@ -154,9 +161,16 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Today's Revenue" value={formatCurrency(stats.todayRevenue)} icon={IndianRupee} tint="accent" />
         <StatCard label="Today's Profit" value={formatCurrency(stats.todayProfit)} icon={TrendingUp} tint="success" />
+        <StatCard
+          label="Total Profit / Loss"
+          value={formatCurrency(stats.totalProfitLoss)}
+          icon={stats.totalProfitLoss >= 0 ? TrendingUp : TrendingDown}
+          tint={stats.totalProfitLoss >= 0 ? 'success' : 'danger'}
+          delta="All delivered orders minus total expenses"
+        />
         <StatCard label="Pending Payments" value={formatCurrency(stats.pendingPayments)} icon={Clock} tint="warning" />
         <StatCard label="Orders This Month" value={stats.ordersThisMonth} icon={ShoppingCart} tint="accent" />
         <StatCard label="Total Clients" value={stats.totalClients} icon={Users} tint="accent" />
